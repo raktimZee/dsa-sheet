@@ -159,10 +159,14 @@ authRouter.post(
     const user = await User.findOne({ email: email.toLowerCase() }).select(
       '+otpHash +otpExpiresAt +otpPurpose'
     );
-    if (!user || !user.passwordHash) throw new ApiError(401, 'invalid credentials', 'bad_creds');
+    // Distinct messages so the user knows whether to sign up vs. fix their password.
+    // (Trades a little anti-enumeration hardening for clearer UX.)
+    if (!user) throw new ApiError(404, 'No account found with this email. Please sign up.', 'no_account');
+    if (!user.passwordHash)
+      throw new ApiError(400, 'This account uses Google sign-in — use "Continue with Google".', 'use_google');
 
     const ok = await bcrypt.compare(password, user.passwordHash);
-    if (!ok) throw new ApiError(401, 'invalid credentials', 'bad_creds');
+    if (!ok) throw new ApiError(401, 'Incorrect password. Please try again.', 'bad_password');
 
     if (user.twoFactorEnabled) {
       if (!otp) {
