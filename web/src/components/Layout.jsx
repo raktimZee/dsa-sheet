@@ -60,11 +60,17 @@ function Avatar({ user, className }) {
 }
 
 function NavItems({ onNavigate }) {
+  const { user } = useAuth();
   const base =
     'flex items-center gap-md rounded-lg px-md py-sm transition-colors font-label-caps text-label-caps group';
+  // Admins get an extra "Admin" entry for the content-management portal.
+  const items =
+    user?.role === 'admin'
+      ? [...NAV, { to: '/admin', icon: 'shield_person', label: 'Admin' }]
+      : NAV;
   return (
     <ul className="flex flex-col gap-xs flex-1">
-      {NAV.map((n) => (
+      {items.map((n) => (
         <li key={n.to}>
           <NavLink
             to={n.to}
