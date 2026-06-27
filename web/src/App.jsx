@@ -17,6 +17,13 @@ function Protected({ children }) {
   return children;
 }
 
+// Admins land on the admin overview; students get the regular dashboard.
+function Home() {
+  const { user } = useAuth();
+  if (user?.role === 'admin') return <Navigate to="/admin" replace />;
+  return <Overview />;
+}
+
 function PublicOnly({ children }) {
   const { user, loading } = useAuth();
   if (loading) return <Splash />;
@@ -35,7 +42,7 @@ export default function App() {
     <Routes>
       <Route path="/login" element={<PublicOnly><Login /></PublicOnly>} />
       <Route path="/register" element={<PublicOnly><Register /></PublicOnly>} />
-      <Route path="/" element={<Protected><Overview /></Protected>} />
+      <Route path="/" element={<Protected><Home /></Protected>} />
       <Route path="/problems" element={<Protected><Problems /></Protected>} />
       <Route path="/rankings" element={<Protected><Rankings /></Protected>} />
       <Route path="/analytics" element={<Protected><Analytics /></Protected>} />

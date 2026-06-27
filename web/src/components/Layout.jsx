@@ -63,10 +63,13 @@ function NavItems({ onNavigate }) {
   const { user } = useAuth();
   const base =
     'flex items-center gap-md rounded-lg px-md py-sm transition-colors font-label-caps text-label-caps group';
-  // Admins get an extra "Admin" entry for the content-management portal.
+  // Admins get an admin-focused nav (no student pages); students get the full sheet nav.
   const items =
     user?.role === 'admin'
-      ? [...NAV, { to: '/admin', icon: 'shield_person', label: 'Admin' }]
+      ? [
+          { to: '/admin', icon: 'shield_person', label: 'Admin', end: true },
+          { to: '/account', icon: 'person', label: 'Account' },
+        ]
       : NAV;
   return (
     <ul className="flex flex-col gap-xs flex-1">
@@ -116,19 +119,21 @@ export default function Layout({ children, solvedCount = 0 }) {
             {user?.firstName || user?.name || 'You'}
           </div>
           <div className="font-label-caps text-label-caps text-on-surface-variant">
-            {solvedCount} solved
+            {user?.role === 'admin' ? 'Administrator' : `${solvedCount} solved`}
           </div>
         </div>
       </div>
-      <button
-        onClick={() => {
-          navigate('/problems');
-          onNavigate?.();
-        }}
-        className="bg-primary text-on-primary text-body-md py-sm px-md rounded-lg mb-xl hover:bg-surface-tint transition-all shadow-sm hover:-translate-y-[1px] active:translate-y-0"
-      >
-        Solve Daily
-      </button>
+      {user?.role !== 'admin' && (
+        <button
+          onClick={() => {
+            navigate('/problems');
+            onNavigate?.();
+          }}
+          className="bg-primary text-on-primary text-body-md py-sm px-md rounded-lg mb-xl hover:bg-surface-tint transition-all shadow-sm hover:-translate-y-[1px] active:translate-y-0"
+        >
+          Solve Daily
+        </button>
+      )}
       <NavItems onNavigate={onNavigate} />
       <div className="mt-auto border-t border-outline-variant pt-md flex flex-col gap-xs">
         <NavLink

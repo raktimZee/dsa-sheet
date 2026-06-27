@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { asyncH, requireUser } from '@dsa/common';
+import { asyncH, requireUser, requireRole } from '@dsa/common';
 import { UserProgress } from '../models/UserProgress.js';
 
 export function progressRouter(queue) {
@@ -100,6 +100,17 @@ export function progressRouter(queue) {
         { $limit: 20 },
       ]);
       res.json({ leaderboard: rows.map((r) => ({ userId: r._id, count: r.count })) });
+    })
+  );
+
+  // ─── GET /progress/all-counts — solved count per user, ALL users (admin overview) ───
+  router.get(
+    '/all-counts',
+    requireRole('admin'),
+    asyncH(async (_req, res) => {
+      const rows = await UserProgress.aggregate([{ $group: { _id: '$userId', count: { $sum: 1 } } }]);
+      const total = rows.reduce((n, r) => n + r.count, 0);
+      res.json({ total, counts: rows.map((r) => ({ userId: r._id, count: r.count })) });
     })
   );
 

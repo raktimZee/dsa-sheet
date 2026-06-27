@@ -6,7 +6,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { OAuth2Client } from 'google-auth-library';
 import { z } from 'zod';
-import { asyncH, ApiError, requireUser } from '@dsa/common';
+import { asyncH, ApiError, requireUser, requireRole } from '@dsa/common';
 import { User } from '../models/User.js';
 import { PendingSignup } from '../models/PendingSignup.js';
 import { sendOtpEmail } from '../mailer.js';
@@ -277,6 +277,33 @@ authRouter.get(
     const user = await User.findById(req.userId);
     if (!user) throw new ApiError(404, 'user not found', 'no_user');
     res.json({ user: publicUser(user) });
+  })
+);
+
+// ─── Admin: all users + summary (for the admin overview dashboard) ───
+authRouter.get(
+  '/admin/users',
+  requireRole('admin'),
+  asyncH(async (_req, res) => {
+    const users = await User.find().sort({ createdAt: -1 }).lean();
+    const admins = users.filter((u) => u.role === 'admin').length;
+    res.json({
+      total: users.length,
+      admins,
+      students: users.length - admins,
+      twoFactor: users.filter((u) => u.twoFactorEnabled).length,
+      google: users.filter((u) => u.googleId).length,
+      users: users.map((u) => ({
+        id: u._id.toString(),
+        email: u.email,
+        name: u.name || [u.firstName, u.lastName].filter(Boolean).join(' '),
+        role: u.role,
+        twoFactorEnabled: !!u.twoFactorEnabled,
+        viaGoogle: !!u.googleId,
+        createdAt: u.createdAt,
+        lastLoginAt: u.lastLoginAt,
+      })),
+    });
   })
 );
 
