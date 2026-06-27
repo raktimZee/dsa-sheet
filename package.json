@@ -1,0 +1,23 @@
+{
+  "name": "dsa-sheet",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "DSA Sheet web application — microservices (MERN), 2FA auth, persisted progress tracking.",
+  "workspaces": [
+    "libs/*",
+    "services/*",
+    "gateway"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "seed": "node services/content/src/seed.js",
+    "dev:auth": "node --watch services/auth/src/index.js",
+    "dev:content": "node --watch services/content/src/index.js",
+    "dev:progress": "node --watch services/progress/src/index.js",
+    "dev:notification": "node --watch services/notification/src/index.js",
+    "dev:gateway": "node --watch gateway/src/index.js"
+  }
+}

@@ -1,0 +1,38 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Material Symbols + brand fonts are loaded in index.html. */
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+.material-symbols-outlined.filled {
+  font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+html, body, #root { min-height: 100%; }
+body { background: #0D1117; color: #E6EDF3; }
+
+@layer base {
+  /* Technical look: monospace headings + brand, IBM Plex Sans body. */
+  h1, h2, h3, h4 {
+    font-family: '"JetBrains Mono"', 'JetBrains Mono', ui-monospace, monospace;
+    letter-spacing: -0.02em;
+  }
+  /* Uppercase mono for the small label-caps (nav items, KPI labels). */
+  .font-label-caps {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+  }
+  /* Dark, terminal-style checkboxes. */
+  input[type='checkbox'] {
+    background-color: #0D1117;
+    border-color: #30363D;
+  }
+  /* Autofill on dark inputs. */
+  input:-webkit-autofill {
+    -webkit-text-fill-color: #E6EDF3;
+    -webkit-box-shadow: 0 0 0 1000px #161B22 inset;
+  }
+  /* Subtle scrollbars to match the dark theme. */
+  * { scrollbar-color: #30363D #0D1117; }
+}

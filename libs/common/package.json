@@ -1,0 +1,13 @@
+{
+  "name": "@dsa/common",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js"
+  },
+  "dependencies": {
+    "ioredis": "^5.4.1",
+    "mongoose": "^8.6.0"
+  }
+}

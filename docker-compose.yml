@@ -1,0 +1,109 @@
+# One `docker compose up` brings the whole system online behind a single public port (80).
+# Topology: nginx (edge) -> gateway (auth + routing) -> {auth, content, progress} services.
+# progress emits jobs to BullMQ (redis) which notification consumes. Mongo holds a DB per service.
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.runCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  auth:
+    build: { context: ., dockerfile: services/auth/Dockerfile }
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      SERVICE_PORT: 4001
+      MONGO_URL: mongodb://mongo:27017
+      REDIS_URL: redis://redis:6379
+      PROGRESS_URL: http://progress:4003
+      NOTIFICATION_URL: http://notification:4004
+      UPLOAD_DIR: /app/uploads
+    volumes:
+      - avatar_data:/app/uploads
+    depends_on:
+      mongo: { condition: service_healthy }
+      redis: { condition: service_healthy }
+
+  content:
+    build: { context: ., dockerfile: services/content/Dockerfile }
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      SERVICE_PORT: 4002
+      MONGO_URL: mongodb://mongo:27017
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      mongo: { condition: service_healthy }
+      redis: { condition: service_healthy }
+
+  progress:
+    build: { context: ., dockerfile: services/progress/Dockerfile }
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      SERVICE_PORT: 4003
+      MONGO_URL: mongodb://mongo:27017
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      mongo: { condition: service_healthy }
+      redis: { condition: service_healthy }
+
+  notification:
+    build: { context: ., dockerfile: services/notification/Dockerfile }
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      SERVICE_PORT: 4004
+      MONGO_URL: mongodb://mongo:27017
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      mongo: { condition: service_healthy }
+      redis: { condition: service_healthy }
+
+  gateway:
+    build: { context: ., dockerfile: gateway/Dockerfile }
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      SERVICE_PORT: 4000
+      REDIS_URL: redis://redis:6379
+      AUTH_URL: http://auth:4001
+      CONTENT_URL: http://content:4002
+      PROGRESS_URL: http://progress:4003
+      NOTIFICATION_URL: http://notification:4004
+    depends_on:
+      redis: { condition: service_healthy }
+
+  web:
+    build: { context: ., dockerfile: web/Dockerfile }
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - gateway
+      - web
+
+volumes:
+  mongo_data:
+  avatar_data:
