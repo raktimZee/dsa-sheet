@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../lib/api.js';
 import { useAuth } from '../lib/auth.jsx';
@@ -18,6 +18,16 @@ export default function Register() {
   const [needsOtp, setNeedsOtp] = useState(false);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [secsLeft, setSecsLeft] = useState(0); // 20s same-code window countdown
+  const [resendBusy, setResendBusy] = useState(false);
+  const [resendNote, setResendNote] = useState('');
+
+  // Tick the same-code countdown down to 0.
+  useEffect(() => {
+    if (secsLeft <= 0) return;
+    const t = setTimeout(() => setSecsLeft((s) => s - 1), 1000);
+    return () => clearTimeout(t);
+  }, [secsLeft]);
 
   // Step 1: submit details → server emails a code, no account yet.
   const submit = async (e) => {
@@ -28,6 +38,7 @@ export default function Register() {
       const res = await api.post('/auth/register', { name, email, password });
       if (res.otpRequired) {
         setNeedsOtp(true);
+        setSecsLeft(20);
         setBusy(false);
         return;
       }
@@ -36,6 +47,22 @@ export default function Register() {
     } catch (err) {
       setError(err.message);
       setBusy(false);
+    }
+  };
+
+  // Resend the code. Within 20s the server re-sends the SAME code; after that, a new one.
+  const resend = async () => {
+    setError('');
+    setResendNote('');
+    setResendBusy(true);
+    try {
+      const res = await api.post('/auth/register/resend', { email });
+      setResendNote(res.reused ? 'Same code re-sent — check inbox & spam.' : 'A new code has been sent.');
+      setSecsLeft(20);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setResendBusy(false);
     }
   };
 
@@ -74,6 +101,16 @@ export default function Register() {
                 <label className="block text-body-sm text-on-surface-variant mb-xs">Verification code</label>
                 <input inputMode="numeric" placeholder="6-digit code" className={field} value={otp} onChange={(e) => setOtp(e.target.value)} autoFocus required />
                 <p className="text-body-sm text-on-surface-variant mt-xs">The code expires in 10 minutes.</p>
+                <div className="flex items-center justify-between mt-sm">
+                  <button type="button" onClick={resend} disabled={resendBusy}
+                    className="text-body-sm text-primary font-semibold hover:underline disabled:opacity-50">
+                    {resendBusy ? 'Resending…' : "Didn't get it? Resend code"}
+                  </button>
+                  <span className="text-body-sm text-on-surface-variant">
+                    {secsLeft > 0 ? `Same code for ${secsLeft}s` : 'Resend sends a new code'}
+                  </span>
+                </div>
+                {resendNote && <p className="text-body-sm text-primary mt-xs">{resendNote}</p>}
               </div>
               {error && <div className="text-body-sm text-error bg-error-container/40 border border-error/30 rounded-lg px-md py-sm">{error}</div>}
               <button disabled={busy} className="w-full bg-primary text-on-primary text-body-md py-sm rounded-lg hover:bg-surface-tint transition-all shadow-sm hover:-translate-y-[1px] disabled:opacity-60">

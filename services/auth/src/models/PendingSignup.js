@@ -13,7 +13,9 @@ const pendingSignupSchema = new mongoose.Schema(
     name: { type: String, trim: true, default: '' },
     passwordHash: { type: String, required: true },
     otpHash: { type: String, required: true },
+    otpCode: { type: String }, // plaintext code, kept only to support "resend the same code"
     otpExpiresAt: { type: Date, required: true },
+    otpSentAt: { type: Date }, // when the current code was last emailed (for the 20s reuse window)
   },
   { timestamps: true, collection: 'pending_signups' }
 );

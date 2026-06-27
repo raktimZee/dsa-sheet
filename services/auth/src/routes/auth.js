@@ -87,7 +87,9 @@ authRouter.post(
         name: name || '',
         passwordHash,
         otpHash: await hashOtp(code),
+        otpCode: code,
         otpExpiresAt: new Date(Date.now() + OTP_TTL_MS),
+        otpSentAt: new Date(),
       },
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
@@ -141,6 +143,46 @@ authRouter.post(
     });
     await PendingSignup.deleteOne({ _id: pending._id });
     res.status(201).json({ token: signToken(user), user: publicUser(user) });
+  })
+);
+
+const resendSchema = z.object({ email: z.string().email() });
+
+// ─── Resend the signup code ───
+// Reuses the SAME code if the current one was emailed < 20s ago and is still valid;
+// otherwise issues a fresh code. Stops rapid resends from burning a new code each time.
+const RESEND_REUSE_MS = 20 * 1000;
+authRouter.post(
+  '/register/resend',
+  asyncH(async (req, res) => {
+    const { email } = resendSchema.parse(req.body);
+    const lower = email.toLowerCase();
+    const pending = await PendingSignup.findOne({ email: lower });
+    if (!pending) throw new ApiError(400, 'no pending signup — start again', 'no_pending');
+
+    const now = Date.now();
+    const recent = pending.otpSentAt && now - pending.otpSentAt.getTime() < RESEND_REUSE_MS;
+    const valid = pending.otpExpiresAt && pending.otpExpiresAt.getTime() > now && pending.otpCode;
+
+    let code;
+    const reused = !!(recent && valid);
+    if (reused) {
+      code = pending.otpCode; // same code within the 20s window
+    } else {
+      code = generateOtp();
+      pending.otpHash = await hashOtp(code);
+      pending.otpCode = code;
+      pending.otpExpiresAt = new Date(now + OTP_TTL_MS);
+      pending.otpSentAt = new Date(now);
+    }
+    await pending.save();
+
+    try {
+      await sendOtpEmail(lower, code, 'signup');
+    } catch {
+      throw new ApiError(502, 'could not resend the code — try again', 'email_failed');
+    }
+    res.json({ otpRequired: true, email: lower, reused });
   })
 );
 
