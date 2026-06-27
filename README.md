@@ -51,7 +51,7 @@ Browser ──▶ nginx (edge, :80) ──┬──▶ /api/* ──▶ API Gate
 
 Full write-up: [`docs/SYSTEM_DESIGN.md`](docs/SYSTEM_DESIGN.md) ·
 Schema: [`docs/DATABASE_SCHEMA.md`](docs/DATABASE_SCHEMA.md) ·
-Deploy: [`docs/AWS_DEPLOYMENT.md`](docs/AWS_DEPLOYMENT.md)
+Deploy: [`docs/GCP_DEPLOYMENT.md`](docs/GCP_DEPLOYMENT.md)
 
 ---
 
